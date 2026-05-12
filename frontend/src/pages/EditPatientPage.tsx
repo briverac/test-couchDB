@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { deletePatient, fetchPatient, updatePatient } from '../api'
+import { AlertBanner, BackLink, DangerZone, LoadingState, PageCard } from '../components'
 
 export default function EditPatientPage() {
   const { id: idParam } = useParams<{ id: string }>()
@@ -28,7 +29,7 @@ export default function EditPatientPage() {
         setBirthDate(p.birthDate ?? '')
         setNotes(p.notes ?? '')
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'No se pudo cargar')
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Load failed')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -51,7 +52,7 @@ export default function EditPatientPage() {
       })
       navigate('/pacientes')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error al guardar')
+      setError(e instanceof Error ? e.message : 'Save failed')
     } finally {
       setSaving(false)
     }
@@ -61,7 +62,7 @@ export default function EditPatientPage() {
     if (!id) return
     if (
       !window.confirm(
-        '¿Eliminar este perfil? Si tiene muestras asociadas, el servidor rechazará el borrado.',
+        'Delete this patient? If samples are linked, the server will reject the delete.',
       )
     ) {
       return
@@ -72,61 +73,43 @@ export default function EditPatientPage() {
       await deletePatient(id)
       navigate('/pacientes')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo eliminar')
+      setError(e instanceof Error ? e.message : 'Delete failed')
     } finally {
       setDeleting(false)
     }
   }
 
   if (!id) {
-    return (
-      <p className="banner error" role="alert">
-        Falta el id en la URL.
-      </p>
-    )
+    return <AlertBanner message="Missing id in the URL." />
   }
 
   return (
     <>
-      <p className="muted page-intro">
-        Editar perfil <code>{id}</code>. Los cambios se reflejan en las muestras que enlacen este <code>patientId</code>.
-      </p>
+      <AlertBanner message={error} />
 
-      {error && (
-        <p className="banner error" role="alert">
-          {error}
-        </p>
-      )}
-
-      <section className="card">
-        <div className="card-head">
-          <h2>Editar paciente</h2>
-          <Link to="/pacientes" className="ghost-link">
-            ← Volver al listado
-          </Link>
-        </div>
+      <PageCard title="Edit patient" headerAside={<BackLink to="/pacientes">← Patients</BackLink>}>
         {loading ? (
-          <p className="muted">Cargando…</p>
+          <LoadingState />
         ) : (
           <form className="form" onSubmit={handleSubmit}>
             <label>
-              ID perfil
+              Patient id
               <input value={id} readOnly className="readonly" />
             </label>
             <label>
-              Nombre completo
+              Full name
               <input value={fullName} onChange={(e) => setFullName(e.target.value)} required />
             </label>
             <label>
-              Fecha de nacimiento (opcional)
+              Date of birth (optional)
               <input
-                placeholder="Ej. 1990-04-15"
+                placeholder="e.g. 1990-04-15"
                 value={birthDate}
                 onChange={(e) => setBirthDate(e.target.value)}
               />
             </label>
             <label>
-              Notas (opcional)
+              Notes (optional)
               <textarea
                 rows={3}
                 value={notes}
@@ -135,20 +118,21 @@ export default function EditPatientPage() {
               />
             </label>
             <button type="submit" disabled={saving}>
-              {saving ? 'Guardando…' : 'Guardar cambios'}
+              {saving ? 'Saving…' : 'Save'}
             </button>
-            <p className="form-divider muted">Zona destructiva</p>
-            <button
-              type="button"
-              className="button-link small danger"
-              disabled={deleting}
-              onClick={() => void handleDelete()}
-            >
-              {deleting ? 'Eliminando…' : 'Eliminar perfil'}
-            </button>
+            <DangerZone>
+              <button
+                type="button"
+                className="button-link small danger"
+                disabled={deleting}
+                onClick={() => void handleDelete()}
+              >
+                {deleting ? 'Deleting…' : 'Delete patient'}
+              </button>
+            </DangerZone>
           </form>
         )}
-      </section>
+      </PageCard>
     </>
   )
 }

@@ -1,5 +1,5 @@
 .app {
-  max-width: 52rem;
+  max-width: 56rem;
   margin: 0 auto;
 }
 
@@ -69,6 +69,25 @@
   margin-top: 0.15rem;
 }
 
+.patient-cell {
+  line-height: 1.4;
+  max-width: 22rem;
+}
+
+.patient-name {
+  font-weight: 500;
+  color: var(--text-h);
+}
+
+.patient-id-sep {
+  font-weight: 400;
+  opacity: 0.65;
+}
+
+.patient-id-inline {
+  font-size: 0.88em;
+}
+
 .form-hint {
   margin: -0.25rem 0 0;
   font-size: 0.88rem;
@@ -129,22 +148,23 @@
   border-bottom: none;
 }
 
-.sample-id-code {
-  font-size: 0.82rem;
-  word-break: break-all;
-  text-align: start;
-  background: var(--bg);
-  padding: 0.2rem 0.35rem;
-  border-radius: 4px;
+.sample-id-primary {
   flex: 1;
-  min-width: 12rem;
+  min-width: 0;
+  text-align: start;
 }
 
-.actions-stack {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
+.action-group {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
   justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.id-chip {
+  font-size: 0.85em;
+  cursor: default;
 }
 
 .read-only-dl {
@@ -169,11 +189,6 @@
 .rev-hint {
   font-weight: normal;
   font-size: 0.85em;
-}
-
-.small-rev {
-  font-size: 0.78rem;
-  word-break: break-all;
 }
 
 .button-link {
@@ -252,9 +267,97 @@ button.button-link {
   letter-spacing: 0.04em;
 }
 
-.data-table .actions {
+.data-table .actions--row {
   text-align: end;
-  width: 7rem;
+  white-space: nowrap;
+  width: 1%;
+  min-width: 10.25rem;
+  vertical-align: middle;
+}
+
+.data-table .actions--row.actions--narrow {
+  min-width: 5.5rem;
+}
+
+.data-table .actions--row.actions--compact {
+  min-width: 7rem;
+}
+
+.data-table .actions--row.actions--center {
+  text-align: center;
+}
+
+.action-group--center {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.data-table .td-status {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.data-table th.th-status {
+  text-align: center;
+}
+
+.data-table th.th-actions {
+  text-align: center;
+}
+
+/* Patient list: balanced columns; fixed layout stops the id column from stretching across half the table */
+.data-table--patients {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.data-table--patients .patient-col-id {
+  width: 34%;
+}
+
+.data-table--patients .patient-col-name {
+  width: 26%;
+}
+
+.data-table--patients .patient-col-dob {
+  width: 7.5rem;
+}
+
+.data-table--patients .patient-col-actions {
+  width: 9.5rem;
+}
+
+.data-table--patients thead th:not(.th-actions),
+.data-table--patients tbody td:not(.actions) {
+  text-align: start;
+  vertical-align: middle;
+}
+
+.data-table--patients .col-patient-id {
+  overflow-wrap: anywhere;
+}
+
+.data-table--patients .col-patient-id .id-chip {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.data-table--patients .col-patient-name {
+  font-weight: 500;
+  color: var(--text-h);
+}
+
+.data-table--patients .col-dob {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-h);
+}
+
+.data-table--patients .col-dob .muted {
+  color: var(--text);
 }
 
 .data-table code {
@@ -271,6 +374,31 @@ button.button-link {
   border-radius: 999px;
   border: 1px solid var(--border);
   background: var(--code-bg);
+  color: var(--text-h);
+}
+
+.pill--pending {
+  border-color: rgba(202, 138, 4, 0.45);
+  background: rgba(250, 204, 21, 0.14);
+  color: #a16207;
+}
+
+.pill--success {
+  border-color: rgba(22, 163, 74, 0.45);
+  background: rgba(34, 197, 94, 0.12);
+  color: #15803d;
+}
+
+.pill--processing {
+  border-color: rgba(59, 130, 246, 0.45);
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+}
+
+.pill--danger {
+  border-color: rgba(220, 38, 38, 0.4);
+  background: rgba(248, 113, 113, 0.12);
+  color: #b91c1c;
 }
 
 .banner-actions {
@@ -408,4 +536,30 @@ button.ghost:hover {
 
 .list li:last-child {
   border-bottom: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .pill--pending {
+    color: #fde047;
+    border-color: rgba(253, 224, 71, 0.35);
+    background: rgba(250, 204, 21, 0.09);
+  }
+
+  .pill--success {
+    color: #86efac;
+    border-color: rgba(34, 197, 94, 0.35);
+    background: rgba(34, 197, 94, 0.1);
+  }
+
+  .pill--processing {
+    color: #93c5fd;
+    border-color: rgba(59, 130, 246, 0.35);
+    background: rgba(59, 130, 246, 0.12);
+  }
+
+  .pill--danger {
+    color: #fca5a5;
+    border-color: rgba(248, 113, 113, 0.35);
+    background: rgba(220, 38, 38, 0.12);
+  }
 }

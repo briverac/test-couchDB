@@ -1,6 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { deleteSample, fetchSamples, type MedicalSample } from '../api'
+import {
+  AlertBanner,
+  EmptyState,
+  IdDisplay,
+  LoadingState,
+  PageCard,
+  RefreshButton,
+  RowActions,
+  StatusBadge,
+  TableWrap,
+} from '../components'
 
 export default function SampleListPage() {
   const [samples, setSamples] = useState<MedicalSample[]>([])
@@ -12,7 +23,7 @@ export default function SampleListPage() {
     try {
       setSamples(await fetchSamples())
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error al cargar')
+      setError(e instanceof Error ? e.message : 'Load failed')
     } finally {
       setLoading(false)
     }
@@ -30,7 +41,7 @@ export default function SampleListPage() {
   async function handleDelete(sample: MedicalSample) {
     if (
       !window.confirm(
-        `¿Eliminar la muestra ${sample.id}?\nEsta acción no se puede deshacer desde la UI (queda borrada en CouchDB).`,
+        `Delete sample ${sample.id}? This cannot be undone from the UI (document is removed in CouchDB).`,
       )
     ) {
       return
@@ -40,99 +51,88 @@ export default function SampleListPage() {
       await deleteSample(sample.id)
       await load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo eliminar')
+      setError(e instanceof Error ? e.message : 'Delete failed')
     }
   }
 
   return (
     <>
-      <p className="muted page-intro">
-        Cada muestra tiene un <strong>ID</strong> único (UUID de CouchDB) y enlaza un <strong>perfil</strong> (
-        <code>patientId</code>). Gestiona pacientes en <Link to="/pacientes">Pacientes</Link>.
-      </p>
+      <AlertBanner message={error} />
 
-      {error && (
-        <p className="banner error" role="alert">
-          {error}
-        </p>
-      )}
-
-      <section className="card">
-        <div className="card-head">
-          <h2>Muestras</h2>
-          <div className="card-actions-inline">
-            <Link to="/pacientes" className="button-link secondary">
-              Perfiles paciente
-            </Link>
-            <Link to="/nueva" className="button-link">
-              + Nueva muestra
-            </Link>
-          </div>
-        </div>
+      <PageCard
+        title="Samples"
+        headerAside={
+          <Link to="/nueva" className="button-link">
+            + New sample
+          </Link>
+        }
+        footer={<RefreshButton onClick={() => void load()} />}
+      >
         {loading ? (
-          <p className="muted">Cargando…</p>
+          <LoadingState />
         ) : sorted.length === 0 ? (
-          <p className="muted">
-            No hay muestras. Necesitas al menos un{' '}
-            <Link to="/pacientes/nueva">paciente dado de alta</Link> antes de crear muestras.
-          </p>
+          <EmptyState>
+            No samples yet. Add a <Link to="/pacientes/nueva">patient</Link> first, then create a sample.
+          </EmptyState>
         ) : (
-          <div className="table-wrap">
+          <TableWrap>
             <table className="data-table">
               <thead>
                 <tr>
-                  <th scope="col">ID muestra</th>
-                  <th scope="col">Paciente</th>
-                  <th scope="col">Estado</th>
-                  <th scope="col">Acciones</th>
+                  <th scope="col">Sample id</th>
+                  <th scope="col">Patient</th>
+                  <th scope="col" className="th-status">
+                    Status
+                  </th>
+                  <th scope="col" className="th-actions">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {sorted.map((s) => (
                   <tr key={s.id}>
                     <td>
-                      <code>{s.id}</code>
+                      <IdDisplay value={s.id} />
                     </td>
-                    <td>
+                    <td className="patient-cell">
                       {s.patientId ? (
                         <>
-                          <div>{s.patientName}</div>
-                          <div className="muted subline">
-                            <code>{s.patientId}</code>
-                          </div>
+                          <span className="patient-name">{s.patientName}</span>
+                          <span className="patient-id-sep">{' · '}</span>
+                          <span className="patient-id-inline muted">
+                            <IdDisplay value={s.patientId} />
+                          </span>
                         </>
                       ) : (
                         <span className="muted">{s.patientName || '—'}</span>
                       )}
                     </td>
-                    <td>
-                      <span className="pill">{s.status}</span>
+                    <td className="td-status">
+                      <StatusBadge status={s.status} />
                     </td>
-                    <td className="actions actions-stack">
+                    <RowActions align="center">
                       <Link to={`/muestra/${encodeURIComponent(s.id)}`} className="button-link small">
-                        Ver
+                        View
                       </Link>
                       <Link to={`/editar/${encodeURIComponent(s.id)}`} className="button-link small secondary">
-                        Editar
+                        Edit
                       </Link>
                       <button
                         type="button"
                         className="button-link small danger"
                         onClick={() => void handleDelete(s)}
                       >
-                        Eliminar
+                        Delete
                       </button>
-                    </td>
+                    </RowActions>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableWrap>
         )}
-        <button type="button" className="ghost" onClick={() => load()}>
-          Actualizar lista
-        </button>
-      </section>
+      </PageCard>
     </>
   )
 }

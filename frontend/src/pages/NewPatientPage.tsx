@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { createPatient } from '../api'
+import { AlertBanner, BackLink, PageCard } from '../components'
 
 export default function NewPatientPage() {
   const navigate = useNavigate()
@@ -20,45 +21,33 @@ export default function NewPatientPage() {
       })
       navigate('/pacientes')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error al guardar')
+      setError(e instanceof Error ? e.message : 'Save failed')
     }
   }
 
   return (
     <>
-      <p className="muted page-intro">
-        CouchDB asigna solo un <strong>UUID</strong> como <code>_id</code> del perfil (no hay campo manual). Verás ese
-        id en el listado para enlazar muestras.
-      </p>
+      <AlertBanner message={error} />
 
-      {error && (
-        <div className="banner error" role="alert">
-          <p>{error}</p>
-        </div>
-      )}
-
-      <section className="card">
-        <div className="card-head">
-          <h2>Nuevo paciente</h2>
-          <Link to="/pacientes" className="ghost-link">
-            ← Volver al listado
-          </Link>
-        </div>
+      <PageCard
+        title="New patient"
+        headerAside={<BackLink to="/pacientes">← Patients</BackLink>}
+      >
         <form className="form" onSubmit={handleSubmit}>
           <label>
-            Nombre completo
+            Full name
             <input value={fullName} onChange={(e) => setFullName(e.target.value)} required />
           </label>
           <label>
-            Fecha de nacimiento (opcional)
+            Date of birth (optional)
             <input
-              placeholder="Ej. 1990-04-15"
+              placeholder="e.g. 1990-04-15"
               value={birthDate}
               onChange={(e) => setBirthDate(e.target.value)}
             />
           </label>
           <label>
-            Notas (opcional)
+            Notes (optional)
             <textarea
               rows={3}
               value={notes}
@@ -66,9 +55,9 @@ export default function NewPatientPage() {
               className="textarea"
             />
           </label>
-          <button type="submit">Guardar perfil</button>
+          <button type="submit">Save</button>
         </form>
-      </section>
+      </PageCard>
     </>
   )
 }

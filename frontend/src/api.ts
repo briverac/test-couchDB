@@ -1,4 +1,9 @@
-/** En desarrollo, Vite reenvía `/api` → Express (véase `vite.config.ts`). */
+/** In dev, Vite proxies `/api` to Express (see `vite.config.ts`). */
+
+import type { SampleStatus } from './constants/sample-status'
+
+export type { SampleStatus } from './constants/sample-status'
+export { SAMPLE_STATUS_VALUES } from './constants/sample-status'
 
 const BASE = '/api'
 
@@ -40,7 +45,7 @@ export async function fetchPatient(id: string): Promise<PatientProfile> {
 export type CreatePatientInput = Pick<PatientProfile, 'fullName'> &
   Partial<Pick<PatientProfile, 'id' | 'birthDate' | 'notes'>>
 
-/** Si omites `id`, CouchDB asigna un UUID al `_id`. */
+/** Omit `id` to let CouchDB assign a UUID as `_id`. */
 export async function createPatient(body: CreatePatientInput): Promise<{ id: string }> {
   const res = await fetch(`${BASE}/patients`, {
     method: 'POST',
@@ -78,7 +83,7 @@ export type MedicalSample = {
   id: string
   patientId: string
   patientName: string
-  status: string
+  status: SampleStatus
   rev?: string
 }
 
@@ -99,7 +104,7 @@ export async function fetchSample(id: string): Promise<MedicalSample> {
 export type CreateSampleInput = Pick<MedicalSample, 'patientId' | 'status'> &
   Partial<Pick<MedicalSample, 'id'>>
 
-/** Si omites `id`, CouchDB asigna un UUID al `_id`. */
+/** Omit `id` to let CouchDB assign a UUID as `_id`. */
 export async function createSample(body: CreateSampleInput): Promise<{ id: string }> {
   const res = await fetch(`${BASE}/samples`, {
     method: 'POST',

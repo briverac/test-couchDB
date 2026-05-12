@@ -13,27 +13,24 @@ function Layout() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Muestras médicas</h1>
-        <p className="muted">
-          React (Vite) → proxy <code>/api</code> → Express · CouchDB: muestras + perfiles de paciente
-        </p>
+        <h1>Lab samples</h1>
       </header>
 
-      <nav className="main-nav" aria-label="Principal">
+      <nav className="main-nav" aria-label="Main">
         <NavLink to="/pacientes" className={({ isActive }) => (isActive ? 'active' : undefined)}>
-          Pacientes
+          Patients
         </NavLink>
         <NavLink to="/" end className={({ isActive }) => (isActive ? 'active' : undefined)}>
-          Muestras
+          Samples
         </NavLink>
         <NavLink to="/nueva" className={({ isActive }) => (isActive ? 'active' : undefined)}>
-          Nueva muestra
+          New sample
         </NavLink>
         <NavLink
           to="/reporte/por-paciente"
           className={({ isActive }) => (isActive ? 'active' : undefined)}
         >
-          Reporte (vista)
+          Report
         </NavLink>
       </nav>
 

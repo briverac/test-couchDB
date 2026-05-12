@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { deletePatient, fetchPatients, type PatientProfile } from '../api'
+import {
+  AlertBanner,
+  EmptyState,
+  IdDisplay,
+  LoadingState,
+  PageCard,
+  RefreshButton,
+  RowActions,
+  TableWrap,
+} from '../components'
 
 export default function PatientListPage() {
   const [patients, setPatients] = useState<PatientProfile[]>([])
@@ -12,7 +22,7 @@ export default function PatientListPage() {
     try {
       setPatients(await fetchPatients())
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error al cargar')
+      setError(e instanceof Error ? e.message : 'Load failed')
     } finally {
       setLoading(false)
     }
@@ -25,96 +35,92 @@ export default function PatientListPage() {
   const sorted = useMemo(
     () =>
       [...patients].sort((a, b) =>
-        a.fullName.localeCompare(b.fullName, 'es', { sensitivity: 'base' }),
+        a.fullName.localeCompare(b.fullName, 'en', { sensitivity: 'base' }),
       ),
     [patients],
   )
 
   async function handleDelete(patient: PatientProfile) {
     const msg =
-      '¿Eliminar este perfil de paciente?\nSi tiene muestras enlazadas, el servidor rechazará el borrado.'
+      'Delete this patient?\nIf samples are linked, the server will reject the delete.'
     if (!window.confirm(msg)) return
     setError(null)
     try {
       await deletePatient(patient.id)
       await load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo eliminar')
+      setError(e instanceof Error ? e.message : 'Delete failed')
     }
   }
 
   return (
     <>
-      <p className="muted page-intro">
-        Perfiles de paciente: CouchDB asigna el <strong>UUID</strong> (<code>_id</code>). Las muestras enlazan con{' '}
-        <code>patientId</code>.
-      </p>
+      <AlertBanner message={error} />
 
-      {error && (
-        <p className="banner error" role="alert">
-          {error}
-        </p>
-      )}
-
-      <section className="card">
-        <div className="card-head">
-          <h2>Pacientes</h2>
+      <PageCard
+        title="Patients"
+        headerAside={
           <Link to="/pacientes/nueva" className="button-link">
-            + Nuevo paciente
+            + New patient
           </Link>
-        </div>
-
+        }
+        footer={<RefreshButton onClick={() => void load()} />}
+      >
         {loading ? (
-          <p className="muted">Cargando…</p>
+          <LoadingState />
         ) : sorted.length === 0 ? (
-          <p className="muted">
-            No hay pacientes. Crea uno para poder asociar muestras.{' '}
-            <Link to="/pacientes/nueva">Dar de alta paciente</Link>
-          </p>
+          <EmptyState>
+            No patients yet. <Link to="/pacientes/nueva">Add one</Link> to link samples.
+          </EmptyState>
         ) : (
-          <div className="table-wrap">
-            <table className="data-table">
+          <TableWrap>
+            <table className="data-table data-table--patients">
+              <colgroup>
+                <col className="patient-col-id" />
+                <col className="patient-col-name" />
+                <col className="patient-col-dob" />
+                <col className="patient-col-actions" />
+              </colgroup>
               <thead>
                 <tr>
-                  <th scope="col">ID perfil</th>
-                  <th scope="col">Nombre</th>
-                  <th scope="col">Nac.</th>
-                  <th scope="col">Acciones</th>
+                  <th scope="col">Id</th>
+                  <th scope="col">Name</th>
+                  <th scope="col">DOB</th>
+                  <th scope="col" className="th-actions">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {sorted.map((p) => (
                   <tr key={p.id}>
-                    <td>
-                      <code>{p.id}</code>
+                    <td className="col-patient-id">
+                      <IdDisplay value={p.id} truncate={false} />
                     </td>
-                    <td>{p.fullName}</td>
-                    <td>{p.birthDate ? <span className="muted">{p.birthDate}</span> : '—'}</td>
-                    <td className="actions actions-stack">
+                    <td className="col-patient-name">{p.fullName}</td>
+                    <td className="col-dob">{p.birthDate ? p.birthDate : <span className="muted">—</span>}</td>
+                    <RowActions align="center" compact>
                       <Link
                         to={`/pacientes/editar/${encodeURIComponent(p.id)}`}
                         className="button-link small"
                       >
-                        Editar
+                        Edit
                       </Link>
                       <button
                         type="button"
                         className="button-link small danger"
                         onClick={() => void handleDelete(p)}
                       >
-                        Eliminar
+                        Delete
                       </button>
-                    </td>
+                    </RowActions>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableWrap>
         )}
-        <button type="button" className="ghost" onClick={() => load()}>
-          Actualizar lista
-        </button>
-      </section>
+      </PageCard>
     </>
   )
 }

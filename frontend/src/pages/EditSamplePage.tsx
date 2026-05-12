@@ -7,6 +7,8 @@ import {
   updateSample,
   type PatientProfile,
 } from '../api'
+import { SAMPLE_STATUS_VALUES, type SampleStatus } from '../constants/sample-status'
+import { AlertBanner, BackLink, DangerZone, EmptyState, LoadingState, PageCard } from '../components'
 
 export default function EditSamplePage() {
   const { id: idParam } = useParams<{ id: string }>()
@@ -15,7 +17,7 @@ export default function EditSamplePage() {
 
   const [patients, setPatients] = useState<PatientProfile[]>([])
   const [patientId, setPatientId] = useState('')
-  const [status, setStatus] = useState('')
+  const [status, setStatus] = useState<SampleStatus>('pending')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -31,13 +33,17 @@ export default function EditSamplePage() {
         const [list, s] = await Promise.all([fetchPatients(), fetchSample(id)])
         if (cancelled) return
         const sorted = [...list].sort((a, b) =>
-          a.fullName.localeCompare(b.fullName, 'es', { sensitivity: 'base' }),
+          a.fullName.localeCompare(b.fullName, 'en', { sensitivity: 'base' }),
         )
         setPatients(sorted)
         setPatientId(s.patientId || '')
-        setStatus(s.status)
+        setStatus(
+          SAMPLE_STATUS_VALUES.includes(s.status as SampleStatus)
+            ? (s.status as SampleStatus)
+            : 'pending',
+        )
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'No se pudo cargar')
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Load failed')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -56,7 +62,7 @@ export default function EditSamplePage() {
       await updateSample(id, { patientId, status })
       navigate('/')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error al guardar')
+      setError(e instanceof Error ? e.message : 'Save failed')
     } finally {
       setSaving(false)
     }
@@ -64,66 +70,47 @@ export default function EditSamplePage() {
 
   async function handleDelete() {
     if (!id) return
-    if (!window.confirm(`¿Eliminar la muestra ${id}?\nSe borrará el documento en CouchDB.`)) return
+    if (!window.confirm(`Delete sample ${id}? This removes the document from CouchDB.`)) return
     setDeleting(true)
     setError(null)
     try {
       await deleteSample(id)
       navigate('/')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo eliminar')
+      setError(e instanceof Error ? e.message : 'Delete failed')
     } finally {
       setDeleting(false)
     }
   }
 
   if (!id) {
-    return (
-      <p className="banner error" role="alert">
-        Falta el id en la URL.
-      </p>
-    )
+    return <AlertBanner message="Missing id in the URL." />
   }
 
   const hasPatients = patients.length > 0
 
   return (
     <>
-      <p className="muted page-intro">
-        Muestra <code>{id}</code>. Puedes reasignar a otro <strong>perfil</strong> o cambiar el estado; el servidor lee
-        CouchDB y guarda con la revisión correcta.
-      </p>
+      <AlertBanner message={error} />
 
-      {error && (
-        <p className="banner error" role="alert">
-          {error}
-        </p>
-      )}
-
-      <section className="card">
-        <div className="card-head">
-          <h2>Editar muestra</h2>
-          <Link to="/" className="ghost-link">
-            ← Volver al listado
-          </Link>
-        </div>
+      <PageCard title="Edit sample" headerAside={<BackLink to="/">← Samples</BackLink>}>
         {loading ? (
-          <p className="muted">Cargando…</p>
+          <LoadingState />
         ) : !hasPatients ? (
-          <p className="muted">
-            No hay pacientes. <Link to="/pacientes/nueva">Crear perfil</Link> antes de editar la muestra.
-          </p>
+          <EmptyState>
+            No patients yet. <Link to="/pacientes/nueva">Add a patient</Link> first.
+          </EmptyState>
         ) : (
           <form className="form" onSubmit={handleSubmit}>
             <label>
-              ID muestra
+              Sample id
               <input value={id} readOnly className="readonly" />
             </label>
             <label>
-              Paciente (perfil)
+              Patient
               <select value={patientId} onChange={(e) => setPatientId(e.target.value)} required>
                 <option value="" disabled>
-                  — Elige perfil —
+                  Select patient
                 </option>
                 {patients.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -133,24 +120,31 @@ export default function EditSamplePage() {
               </select>
             </label>
             <label>
-              Estado
-              <input value={status} onChange={(e) => setStatus(e.target.value)} required />
+              Status
+              <select value={status} onChange={(e) => setStatus(e.target.value as SampleStatus)} required>
+                {SAMPLE_STATUS_VALUES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
             </label>
             <button type="submit" disabled={saving || !patientId}>
-              {saving ? 'Guardando…' : 'Guardar cambios'}
+              {saving ? 'Saving…' : 'Save'}
             </button>
-            <p className="form-divider muted">Zona destructiva</p>
-            <button
-              type="button"
-              className="button-link small danger"
-              disabled={deleting}
-              onClick={() => void handleDelete()}
-            >
-              {deleting ? 'Eliminando…' : 'Eliminar muestra'}
-            </button>
+            <DangerZone>
+              <button
+                type="button"
+                className="button-link small danger"
+                disabled={deleting}
+                onClick={() => void handleDelete()}
+              >
+                {deleting ? 'Deleting…' : 'Delete sample'}
+              </button>
+            </DangerZone>
           </form>
         )}
-      </section>
+      </PageCard>
     </>
   )
 }

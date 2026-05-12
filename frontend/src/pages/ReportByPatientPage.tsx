@@ -5,6 +5,16 @@ import {
   fetchSamplesByPatientReport,
   type SamplesByPatientStat,
 } from '../api'
+import {
+  AlertBanner,
+  EmptyState,
+  IdDisplay,
+  LoadingState,
+  PageCard,
+  RefreshButton,
+  RowActions,
+  TableWrap,
+} from '../components'
 
 export default function ReportByPatientPage() {
   const [stats, setStats] = useState<SamplesByPatientStat[]>([])
@@ -25,7 +35,7 @@ export default function ReportByPatientPage() {
       setViewName(data.view)
       setNote(data.note)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error al cargar el reporte')
+      setError(e instanceof Error ? e.message : 'Failed to load report')
     } finally {
       setLoading(false)
     }
@@ -48,7 +58,7 @@ export default function ReportByPatientPage() {
       const ids = await fetchSampleIdsForPatient(patientId)
       setIdsByPatient((prev) => ({ ...prev, [patientId]: ids }))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error al cargar ids de muestras')
+      setError(e instanceof Error ? e.message : 'Failed to load sample ids')
       setExpanded(null)
     } finally {
       setIdsLoading(null)
@@ -57,52 +67,36 @@ export default function ReportByPatientPage() {
 
   return (
     <>
-      <p className="muted page-intro">
-        Este resumen usa una <strong>vista MapReduce</strong> en CouchDB (
-        <code>{viewName || 'sample_views/count_by_patient'}</code>): el <strong>conteo por paciente</strong> se calcula
-        en el motor con <code>emit(patientId, 1)</code> y reduce <code>_sum</code>. Solo cuenta muestras que tengan el
-        campo <code>patientId</code>. La API añade el nombre del perfil desde la BD de pacientes.
-      </p>
       {note ? (
-        <p className="muted page-intro">
+        <EmptyState>
           <em>{note}</em>
-        </p>
+        </EmptyState>
       ) : null}
 
-      {error && (
-        <p className="banner error" role="alert">
-          {error}
-        </p>
-      )}
+      <AlertBanner message={error} />
 
-      <section className="card">
-        <div className="card-head">
-          <h2>Muestras por paciente (vista)</h2>
-          <button type="button" className="ghost" onClick={() => load()}>
-            Recalcular
-          </button>
-        </div>
+      <PageCard
+        title="Samples by patient"
+        headerAside={<RefreshButton onClick={() => void load()} />}
+      >
         {loading ? (
-          <p className="muted">Cargando…</p>
+          <LoadingState />
         ) : error ? (
-          <p className="muted">
-            No se pudo leer la vista en CouchDB. Comprueba que la API esté en marcha y que la base{' '}
-            <code>medical_samples</code> exista; si acabas de crear el contenedor, pulsa <strong>Recalcular</strong> tras
-            arrancar el backend.
-          </p>
+          <EmptyState>
+            Could not run the CouchDB view. Check that the API is up and the <code>medical_samples</code> database
+            exists, then hit Refresh.
+          </EmptyState>
         ) : stats.length === 0 ? (
-          <p className="muted">
-            No hay muestras con <code>patientId</code> indexadas por la vista (o aún no hay datos).
-          </p>
+          <EmptyState>No rows for this view yet (no samples with <code>patientId</code>).</EmptyState>
         ) : (
-          <div className="table-wrap">
+          <TableWrap>
             <table className="data-table">
               <thead>
                 <tr>
-                  <th scope="col">Paciente</th>
-                  <th scope="col">ID perfil</th>
-                  <th scope="col">Muestras</th>
-                  <th scope="col">Detalle</th>
+                  <th scope="col">Patient</th>
+                  <th scope="col">Patient id</th>
+                  <th scope="col">Count</th>
+                  <th scope="col">Detail</th>
                 </tr>
               </thead>
               <tbody>
@@ -110,52 +104,55 @@ export default function ReportByPatientPage() {
                   <tr key={row.patientId}>
                     <td>{row.patientName}</td>
                     <td>
-                      <code>{row.patientId}</code>
+                      <IdDisplay value={row.patientId} />
                     </td>
                     <td>
                       <span className="pill">{row.count}</span>
                     </td>
-                    <td className="actions">
+                    <RowActions stack={false}>
                       <button
                         type="button"
                         className="button-link small"
                         onClick={() => toggleIds(row.patientId)}
                         disabled={idsLoading === row.patientId}
                       >
-                        {expanded === row.patientId ? 'Ocultar ids' : 'Ver ids'}
+                        {expanded === row.patientId ? 'Hide ids' : 'Show ids'}
                       </button>
-                    </td>
+                    </RowActions>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableWrap>
         )}
         {expanded && idsByPatient[expanded] ? (
           <div className="detail-panel">
-            <p className="muted">
-              Muestras (<code>sample_views/samples_by_patient</code>) para{' '}
-              <code>{expanded}</code>. <strong>Ver muestra</strong> abre solo lectura; desde ahí puedes pasar a editar si
-              hace falta.
-            </p>
+            <EmptyState>
+              Sample ids for <IdDisplay value={expanded} /> · view <code>sample_views/samples_by_patient</code>
+            </EmptyState>
             <ul className="sample-id-list">
               {idsByPatient[expanded].map((sid) => (
                 <li key={sid} className="sample-id-row">
-                  <code className="sample-id-code" title={sid}>
-                    {sid}
-                  </code>
+                  <span className="sample-id-primary">
+                    <IdDisplay value={sid} />
+                  </span>
                   <Link
                     to={`/muestra/${encodeURIComponent(sid)}`}
                     className="button-link small"
                   >
-                    Ver muestra
+                    Open
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
         ) : null}
-      </section>
+      </PageCard>
+      {!loading && viewName ? (
+        <EmptyState style={{ fontSize: '0.82rem', marginTop: '0.5rem' }}>
+          View: <code>{viewName}</code>
+        </EmptyState>
+      ) : null}
     </>
   )
 }

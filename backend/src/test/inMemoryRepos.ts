@@ -11,7 +11,7 @@ function couchErr(statusCode: number, reason?: string): Error & { statusCode: nu
   return e;
 }
 
-/** Mini Couch en RAM — suficiente para tests de API (sin red). */
+/** Tiny in-memory Couch — enough for API tests without network. */
 export function createInMemoryRepositories(): Repositories {
   const patients = new Map<string, PatientDoc & { _rev: string }>();
   const samples = new Map<string, SampleDocWrite & { _rev: string }>();

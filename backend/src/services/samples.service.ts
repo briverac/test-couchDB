@@ -1,3 +1,5 @@
+import { normalizeSampleStatus, type SampleStatus } from "../constants/sample-status.js";
+import { isUserDataDoc } from "../db/couch-doc-filters.js";
 import { getRepos } from "../db/context.js";
 import { couchStatus } from "../lib/couch-errors.js";
 import { patientExists } from "./patients.service.js";
@@ -12,13 +14,13 @@ async function resolvePatientDisplayName(doc: SampleStored): Promise<{ patientId
       return { patientId: rawId, patientName: p.fullName };
     } catch (e) {
       if (couchStatus(e) === 404) {
-        return { patientId: rawId, patientName: "(perfil no encontrado)" };
+        return { patientId: rawId, patientName: "(patient profile not found)" };
       }
       throw e;
     }
   }
   const legacy = doc.patientName != null ? String(doc.patientName) : "";
-  return { patientId: "", patientName: legacy ? `${legacy} (sin perfil)` : "" };
+  return { patientId: "", patientName: legacy ? `${legacy} (no profile)` : "" };
 }
 
 async function hydrateSample(doc: SampleStored): Promise<MedicalSample> {
@@ -27,7 +29,7 @@ async function hydrateSample(doc: SampleStored): Promise<MedicalSample> {
     id: doc._id,
     patientId,
     patientName,
-    status: String(doc.status ?? ""),
+    status: normalizeSampleStatus(doc.status),
   };
   if (doc._rev) sample.rev = doc._rev;
   return sample;
@@ -39,7 +41,7 @@ export async function listSamples(): Promise<MedicalSample[]> {
   return Promise.all(
     result.rows
       .map((row) => row.doc)
-      .filter((doc) => Boolean(doc))
+      .filter(isUserDataDoc)
       .map((doc) => hydrateSample(doc as SampleStored)),
   );
 }
@@ -58,7 +60,7 @@ export async function getSampleById(id: string): Promise<MedicalSample | null> {
 export async function createSample(input: {
   customId?: string;
   patientId: string;
-  status: string;
+  status: SampleStatus;
 }): Promise<{ id: string; rev: string }> {
   const { sampleDb } = getRepos();
   const pid = input.patientId.trim();
@@ -81,7 +83,7 @@ export class UnknownPatientError extends Error {
 
 export async function updateSample(
   sampleId: string,
-  input: { patientId: string; status: string },
+  input: { patientId: string; status: SampleStatus },
 ): Promise<{ id: string; rev: string }> {
   const { sampleDb } = getRepos();
   const pid = input.patientId.trim();

@@ -13,7 +13,7 @@ export type Repositories = {
 
 let repos: Repositories | null = null;
 
-/** Inyecta Couch en memoria (solo tests). En producción debe permanecer en `null`. */
+/** In-memory Couch substitute (tests only). Must stay `null` in production. */
 let testRepos: Repositories | null = null;
 
 export function setTestRepositories(override: Repositories | null): void {
@@ -39,5 +39,5 @@ export function getRepos(): Repositories {
 }
 
 export function bootstrapLogHint(): string {
-  return `${config.samplesDb}, ${config.patientsDb} (+ vistas ${designBare(SAMPLE_VIEWS_DD)})`;
+  return `${config.samplesDb}, ${config.patientsDb} (+ views ${designBare(SAMPLE_VIEWS_DD)})`;
 }

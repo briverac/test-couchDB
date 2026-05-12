@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { couchStatus, sendCouchError } from "../lib/couch-errors.js";
-import type { PatientProfile } from "../types/models.js";
+import { parseBodyOr400 } from "../lib/parse-json-body.js";
+import { patientCreateBodySchema, patientUpdateBodySchema } from "../validation/request-schemas.js";
 import {
   PatientHasSamplesError,
   ValidationError,
@@ -24,7 +25,7 @@ export async function getById(req: Request, res: Response): Promise<void> {
   try {
     const patient = await getPatientById(req.params.id);
     if (!patient) {
-      res.status(404).json({ error: "not_found", message: "No existe un paciente con ese id." });
+      res.status(404).json({ error: "not_found", message: "No patient found for that id." });
       return;
     }
     res.json({ patient });
@@ -35,27 +36,20 @@ export async function getById(req: Request, res: Response): Promise<void> {
 
 export async function create(req: Request, res: Response): Promise<void> {
   try {
-    const body = req.body as Partial<PatientProfile>;
-    const customIdRaw = typeof body.id === "string" ? body.id.trim() : "";
-    const fullName = typeof body.fullName === "string" ? body.fullName.trim() : "";
-    const birthDate = typeof body.birthDate === "string" ? body.birthDate.trim() : undefined;
-    const notes = typeof body.notes === "string" ? body.notes.trim() : undefined;
-    if (!fullName) {
-      res.status(400).json({ error: "Se requiere fullName." });
-      return;
-    }
+    const parsed = parseBodyOr400(patientCreateBodySchema, req.body, res);
+    if (!parsed) return;
     const saved = await createPatient({
-      customId: customIdRaw || undefined,
-      fullName,
-      birthDate,
-      notes,
+      customId: parsed.id?.trim() || undefined,
+      fullName: parsed.fullName,
+      birthDate: parsed.birthDate,
+      notes: parsed.notes,
     });
     res.status(201).json({ ok: true, id: saved.id, rev: saved.rev });
   } catch (e) {
     if (couchStatus(e) === 409) {
       res.status(409).json({
         error: "conflict",
-        message: "Ya existe un paciente con ese id. Usa PUT /patients/:id para actualizarlo.",
+        message: "A patient with that id already exists. Use PUT /patients/:id to update.",
       });
       return;
     }
@@ -72,18 +66,18 @@ export async function remove(req: Request, res: Response): Promise<void> {
       res.status(409).json({
         error: "has_samples",
         count: e.count,
-        message: `Hay ${e.count} muestra(s) con este paciente. Elimínalas primero o cambia su patientId.`,
+        message: `This patient has ${e.count} sample(s). Delete or reassign them before deleting the patient.`,
       });
       return;
     }
     if (couchStatus(e) === 404) {
-      res.status(404).json({ error: "not_found", message: "No existe un paciente con ese id." });
+      res.status(404).json({ error: "not_found", message: "No patient found for that id." });
       return;
     }
     if (couchStatus(e) === 409) {
       res.status(409).json({
         error: "conflict",
-        message: "Revisión desactualizada al borrar. Recarga y reintenta.",
+        message: "Stale revision while deleting. Reload and try again.",
       });
       return;
     }
@@ -94,8 +88,9 @@ export async function remove(req: Request, res: Response): Promise<void> {
 export async function update(req: Request, res: Response): Promise<void> {
   try {
     const id = req.params.id;
-    const body = req.body as Partial<Pick<PatientProfile, "fullName" | "birthDate" | "notes">>;
-    const saved = await updatePatient(id, body);
+    const parsed = parseBodyOr400(patientUpdateBodySchema, req.body, res);
+    if (!parsed) return;
+    const saved = await updatePatient(id, parsed);
     res.json({ ok: true, id: saved.id, rev: saved.rev });
   } catch (e) {
     if (e instanceof ValidationError) {
@@ -103,13 +98,13 @@ export async function update(req: Request, res: Response): Promise<void> {
       return;
     }
     if (couchStatus(e) === 404) {
-      res.status(404).json({ error: "not_found", message: "No existe un paciente con ese id." });
+      res.status(404).json({ error: "not_found", message: "No patient found for that id." });
       return;
     }
     if (couchStatus(e) === 409) {
       res.status(409).json({
         error: "conflict",
-        message: "Revisión desactualizada en el perfil del paciente. Recarga y reintenta.",
+        message: "Stale revision on patient profile. Reload and try again.",
       });
       return;
     }

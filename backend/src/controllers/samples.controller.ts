@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { couchStatus, sendCouchError } from "../lib/couch-errors.js";
-import type { MedicalSample } from "../types/models.js";
+import { parseBodyOr400 } from "../lib/parse-json-body.js";
 import {
   UnknownPatientError,
   createSample,
@@ -9,6 +9,7 @@ import {
   listSamples,
   updateSample,
 } from "../services/samples.service.js";
+import { sampleCreateBodySchema, sampleUpdateBodySchema } from "../validation/request-schemas.js";
 
 export async function list(_req: Request, res: Response): Promise<void> {
   try {
@@ -23,7 +24,7 @@ export async function getById(req: Request, res: Response): Promise<void> {
   try {
     const sample = await getSampleById(req.params.id);
     if (!sample) {
-      res.status(404).json({ error: "not_found", message: "No existe una muestra con ese id." });
+      res.status(404).json({ error: "not_found", message: "No sample found for that id." });
       return;
     }
     res.json({ sample });
@@ -34,30 +35,26 @@ export async function getById(req: Request, res: Response): Promise<void> {
 
 export async function create(req: Request, res: Response): Promise<void> {
   try {
-    const { id: bodyId, patientId, status } = req.body as Partial<MedicalSample>;
-    const customId = typeof bodyId === "string" ? bodyId.trim() : "";
-    if (typeof patientId !== "string" || typeof status !== "string") {
-      res.status(400).json({ error: "Se requiere patientId y status (strings). El id es opcional." });
-      return;
-    }
+    const parsed = parseBodyOr400(sampleCreateBodySchema, req.body, res);
+    if (!parsed) return;
     const saved = await createSample({
-      customId: customId || undefined,
-      patientId,
-      status,
+      customId: parsed.id?.trim() || undefined,
+      patientId: parsed.patientId,
+      status: parsed.status,
     });
     res.status(201).json({ ok: true, id: saved.id, rev: saved.rev });
   } catch (e) {
     if (e instanceof UnknownPatientError) {
       res.status(400).json({
         error: "unknown_patient",
-        message: "No existe un perfil de paciente con ese patientId. Crea primero el paciente.",
+        message: "No patient profile for that patientId. Create the patient first.",
       });
       return;
     }
     if (couchStatus(e) === 409) {
       res.status(409).json({
         error: "conflict",
-        message: "Ya existe una muestra con ese id. Usa PUT /samples/:id para actualizarla (con la revisión actual).",
+        message: "A sample with that id already exists. Use PUT /samples/:id with the current revision.",
       });
       return;
     }
@@ -71,13 +68,13 @@ export async function remove(req: Request, res: Response): Promise<void> {
     res.status(204).send();
   } catch (e) {
     if (couchStatus(e) === 404) {
-      res.status(404).json({ error: "not_found", message: "No existe una muestra con ese id." });
+      res.status(404).json({ error: "not_found", message: "No sample found for that id." });
       return;
     }
     if (couchStatus(e) === 409) {
       res.status(409).json({
         error: "conflict",
-        message: "Conflicto al borrar la muestra. Recarga y reintenta.",
+        message: "Conflict while deleting sample. Reload and try again.",
       });
       return;
     }
@@ -88,30 +85,26 @@ export async function remove(req: Request, res: Response): Promise<void> {
 export async function update(req: Request, res: Response): Promise<void> {
   try {
     const sid = req.params.id;
-    const { patientId, status } = req.body as Partial<Pick<MedicalSample, "patientId" | "status">>;
-    if (typeof patientId !== "string" || typeof status !== "string") {
-      res.status(400).json({ error: "patientId y status son obligatorios." });
-      return;
-    }
-    const saved = await updateSample(sid, { patientId, status });
+    const parsed = parseBodyOr400(sampleUpdateBodySchema, req.body, res);
+    if (!parsed) return;
+    const saved = await updateSample(sid, parsed);
     res.json({ ok: true, id: saved.id, rev: saved.rev });
   } catch (e) {
     if (e instanceof UnknownPatientError) {
       res.status(400).json({
         error: "unknown_patient",
-        message: "No existe un perfil de paciente con ese patientId.",
+        message: "No patient profile for that patientId.",
       });
       return;
     }
     if (couchStatus(e) === 404) {
-      res.status(404).json({ error: "not_found", message: "No existe una muestra con ese id." });
+      res.status(404).json({ error: "not_found", message: "No sample found for that id." });
       return;
     }
     if (couchStatus(e) === 409) {
       res.status(409).json({
         error: "conflict",
-        message:
-          "Revisión desactualizada: el documento cambió en CouchDB (otra escritura ganó). Vuelve a leer y reintenta.",
+        message: "Stale revision: the document changed in CouchDB. Reload and try again.",
       });
       return;
     }

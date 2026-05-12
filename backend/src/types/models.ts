@@ -1,4 +1,10 @@
-/** Perfil persistido en CouchDB (`patient_profiles`). */
+import type { SampleStatus } from "../constants/sample-status.js";
+
+/**
+ * TS-only contracts; they do not validate `req.body` at runtime.
+ * See `backend/docs/schemas-validation.md` (Zod vs these types).
+ */
+/** Patient document stored in CouchDB (`patient_profiles`). */
 export type PatientDoc = {
   _id: string;
   _rev?: string;
@@ -7,7 +13,7 @@ export type PatientDoc = {
   notes?: string;
 };
 
-/** Perfil expuesto por la API REST. */
+/** Patient profile returned by the REST API. */
 export type PatientProfile = {
   id: string;
   fullName: string;
@@ -16,16 +22,16 @@ export type PatientProfile = {
   rev?: string;
 };
 
-/** Muestra para la API (nombre de paciente resuelto cuando aplica). */
+/** Sample row for the API (patient name resolved when linked). */
 export type MedicalSample = {
   id: string;
   patientId: string;
   patientName: string;
-  status: string;
+  status: SampleStatus;
   rev?: string;
 };
 
-/** Documento de muestra como puede estar en CouchDB (actual o legacy). */
+/** Sample document shape as stored in CouchDB (current or legacy fields). */
 export type SampleStored = {
   _id: string;
   _rev?: string;
@@ -34,10 +40,10 @@ export type SampleStored = {
   patientName?: unknown;
 };
 
-/** Payload de escritura en `medical_samples` (puede omitir _id para UUID automático). */
+/** Write payload for `medical_samples` (omit `_id` for server-assigned UUID). */
 export type SampleDocWrite = {
   _id: string;
   _rev?: string;
   patientId: string;
-  status: string;
+  status: SampleStatus;
 };

@@ -15,7 +15,7 @@ export async function getSamplesByPatientReport(): Promise<{
     raw.rows.map(async (row) => {
       const patientId = typeof row.key === "string" ? row.key : JSON.stringify(row.key);
       const count = typeof row.value === "number" ? row.value : Number(row.value);
-      let patientName = "(perfil no encontrado)";
+      let patientName = "(patient profile not found)";
       try {
         const p = await patientDb.get(patientId);
         patientName = p.fullName;
@@ -29,7 +29,7 @@ export async function getSamplesByPatientReport(): Promise<{
   return {
     stats,
     view: "sample_views/count_by_patient",
-    note: "conteo en CouchDB por MapReduce; nombre de paciente enriquecido en Node",
+    note: "MapReduce count in CouchDB; patient names joined in Node",
   };
 }
 

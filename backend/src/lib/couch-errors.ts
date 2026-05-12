@@ -1,13 +1,13 @@
 import type { Response } from "express";
 
-/** Código HTTP que nano/CouchDB suele poner en errores. */
+/** HTTP status nano/CouchDB usually attach to errors. */
 export function couchStatus(e: unknown): number | undefined {
   if (typeof e !== "object" || e === null) return undefined;
   const code = (e as { statusCode?: number }).statusCode;
   return typeof code === "number" ? code : undefined;
 }
 
-/** Respuesta JSON genérica ante fallos de Couch que no manejamos caso a caso. */
+/** Generic JSON response for Couch failures we do not handle case-by-case. */
 export function sendCouchError(res: Response, e: unknown): void {
   const status = couchStatus(e);
   const reason =

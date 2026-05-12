@@ -1,3 +1,4 @@
+import { isUserDataDoc } from "../db/couch-doc-filters.js";
 import { getRepos } from "../db/context.js";
 import { couchStatus } from "../lib/couch-errors.js";
 import { withSampleViewsRetry } from "../lib/couch-sample-views.js";
@@ -9,7 +10,7 @@ export async function listPatientsSorted(): Promise<PatientProfile[]> {
   const result = await patientDb.list({ include_docs: true });
   const patients = result.rows
     .map((row) => row.doc)
-    .filter((doc) => Boolean(doc))
+    .filter(isUserDataDoc)
     .map((doc) => patientDocToProfile(doc as PatientDoc));
   patients.sort((a, b) => a.fullName.localeCompare(b.fullName, "es"));
   return patients;
@@ -84,7 +85,7 @@ export async function updatePatient(
   const { patientDb } = getRepos();
   const fullName = typeof body.fullName === "string" ? body.fullName.trim() : "";
   if (!fullName) {
-    throw new ValidationError("fullName es obligatorio.");
+    throw new ValidationError("fullName is required.");
   }
   const current = await patientDb.get(id);
   const next: PatientDoc = {

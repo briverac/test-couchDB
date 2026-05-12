@@ -1,5 +1,5 @@
 {
-  "name": "test-vista",
+  "name": "test-couchdb",
   "private": true,
   "version": "0.1.0",
   "workspaces": ["backend", "frontend"],

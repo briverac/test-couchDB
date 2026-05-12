@@ -4,8 +4,8 @@ import { reportsRouter } from "./routes/reports.routes.js";
 import { samplesRouter } from "./routes/samples.routes.js";
 
 /**
- * Fábrica de la app HTTP (sin escuchar puerto).
- * Así los tests pueden importar `createApp()` sin arrancar el servidor.
+ * HTTP app factory (does not listen on a port).
+ * Tests import `createApp()` without starting the server.
  */
 export function createApp(): express.Application {
   const app = express();
